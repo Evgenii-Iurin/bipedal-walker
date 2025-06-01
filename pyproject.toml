@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69.5", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-trainer"
+version = "0.1.0"
+description = "End-to-end pipeline for training RL algorithms"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Eugene Iurin", email = "evgenii.iurin@gmail.com"}]
+keywords = ["RL", "agent", "games"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = ["pre-commit (>=4.2.0,<5.0.0)", "swig (>=4.3.1,<5.0.0)", "stable-baselines3 (>=2.6.0,<3.0.0)"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where   = ["src"]
+include = ["rl_trainer*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"rl_trainer" = ["py.typed"]
+
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src"]
+
+[tool.pytest.ini_options]
+addopts   = "-ra -q"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
