@@ -5,6 +5,7 @@ import yaml
 from pydantic import BaseModel
 
 from rl_trainer.base.registry import get_config_class
+from rl_trainer.algorithms.ppo.model import PPOBipedal
 
 
 def load_config(path: Union[str, Path]) -> Dict[str, Any]:
