@@ -78,12 +78,12 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
 
 To track all experiments, we are wrapping the training pipeline with MLflow. This allows us to track all metrics, model parameters, and artifacts
 
-![MLFlow UI](assets/mlflow.png){ width=600px }
+![MLFlow UI](assets/mlflow.png)
 
 
 ### Model creation strategy
 
-![Register the Model](assets/pipeline_overview.png){ width=600px }
+![Register the Model](assets/pipeline_overview.png)
 
 
 ## Git Flow
