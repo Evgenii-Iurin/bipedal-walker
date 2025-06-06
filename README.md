@@ -30,6 +30,61 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
 3. Activate pre-commit
     `pre-commit install`
 
+### Run training
+
+1. First run MLFlow server
+    ```
+    mlflow server --host 127.0.0.1 --port 8080
+    ```
+2. Run training
+    ```
+    python src/rl_trainer/train.py
+    ```
+
+### Model config
+
+    ```yaml
+    cls: rl_trainer.algorithms.ppo.model:PPOBipedal
+
+    $name: PPOBipedalBaseline
+
+    inputs:
+    policy: MlpPolicy
+    seed: 0
+    learning_rate: 0.0003
+    gamma:         0.99
+    gae_lambda:    0.95
+    clip_range:    0.2
+    n_steps:       1024
+    batch_size:    32
+    n_epochs:      1
+    ent_coef:      0.0
+    vf_coef:       0.5
+    max_grad_norm: 0.5
+    progress_bar: True
+
+    logger:
+    - stable_baselines3.common.logger:Logger:
+        folder: null
+        output_formats:
+            - rl_trainer.reporters.mlflow_reporters:MLflowOutputFormat
+
+    callbacks:
+    - rl_trainer.callbacks.mlflow:MLflowCallback:
+        save_freq: 5000
+    ```
+
+### MLFlow
+
+To track all experiments, we are wrapping the training pipeline with MLflow. This allows us to track all metrics, model parameters, and artifacts
+
+![MLFlow UI](assets/mlflow.png){ width=600px }
+
+
+### Model creation strategy
+
+![Register the Model](assets/pipeline_overview.png){ width=600px }
+
 
 ## Git Flow
 
