@@ -43,12 +43,21 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
 
 ### Model config
 
-    ```yaml
-    cls: rl_trainer.algorithms.ppo.model:PPOBipedal
+Each model config should contain two things:
 
-    $name: PPOBipedalBaseline
+* `cls` – path to the module in the format `path:class`
+* `$name` – **unique name** for the given model. This name is used to automatically match the config with the provided model.
 
-    inputs:
+If your model requires additional parameters, like in this case `inputs`, `logger`, or `callbacks`, you can define them here as well. Remember to add a method into the class to process the given parameters.
+
+Here is the example of config:
+
+```yaml
+cls: rl_trainer.algorithms.ppo.model:PPOBipedal
+
+$name: PPOBipedalBaseline
+
+inputs:
     policy: MlpPolicy
     seed: 0
     learning_rate: 0.0003
@@ -63,16 +72,16 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
     max_grad_norm: 0.5
     progress_bar: True
 
-    logger:
+logger:
     - stable_baselines3.common.logger:Logger:
         folder: null
         output_formats:
             - rl_trainer.reporters.mlflow_reporters:MLflowOutputFormat
 
-    callbacks:
+callbacks:
     - rl_trainer.callbacks.mlflow:MLflowCallback:
         save_freq: 5000
-    ```
+```
 
 ### MLFlow
 
