@@ -41,6 +41,26 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
     python src/rl_trainer/train.py
     ```
 
+### Set up experiment
+
+You can easily set up different experiments just by changing the `common.yaml` config. Provide the environment and model you want to train or test here
+
+```yaml
+setup:
+  env:
+    name: BipedalWalker-v3 # <-- name is used only for mlflow tags
+    config: src/rl_trainer/configs/environments/ bipedal_walker.yaml # <-- path to the environment config
+  algo:
+    name: ppo_baseline  # <-- name is used for mlflow tags
+    config: src/rl_trainer/configs/algorithms/ppo.yaml  # <-- path to the model config
+  seed: 42
+
+mlflow:
+  tracking_uri:  http://xxxx:yyyy # <-- Add here address and port
+  ...
+```
+
+
 ### Model config
 
 Each model config should contain two things:
