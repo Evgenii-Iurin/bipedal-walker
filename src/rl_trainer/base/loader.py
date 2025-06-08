@@ -5,7 +5,7 @@ import yaml
 from pydantic import BaseModel
 
 from rl_trainer.base.registry import get_config_class
-from rl_trainer.algorithms.ppo.model import PPOBipedal
+from rl_trainer.algorithms.ppo.model import PPOBaselineModel  # noqa: F401
 
 
 def load_config(path: Union[str, Path]) -> Dict[str, Any]:

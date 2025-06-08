@@ -41,6 +41,46 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
     python src/rl_trainer/train.py
     ```
 
+
+### Project structure
+
+```yaml
+./src
+└── rl_trainer
+    ├── algorithms                                  # <-- Add your models here
+    │   └── ppo
+    │       ├── config.py                           # <-- Model's config
+    │       └── model.py                            # <-- Model
+    |
+    ├── base                                        # <-- Folder contains all base scipts
+    │   ├── conf
+    │   │   ├── model_stable_baselines_config.py    # <-- Base config for Stable Baselines models
+    │   │   └── model_config.py                     # <-- Base config
+    │   ├── model
+    │   │   ├── base_stable_baselines_model.py      # <-- Base model for Stable Baselines models
+    │   │   └── base_model.py                       # <-- Base Model
+    │   ├── loader.py
+    │   ├── mflow_setup.py
+    │   └── registry.py
+    |
+    ├── callbacks                                   # <-- Keep all your callbacks here
+    │   └── mlflow.py
+    |
+    ├── reporters                                   # <-- Keep all your reporters here
+    │   └── mlflow_reporters.py
+    |
+    ├── configs                                     # <-- Define configs for you models here
+    │   ├── algorithms
+    │   │   └── ppo.yaml
+    │   ├── environments
+    │   |   └── bipedal.yaml
+    │   └── common.yaml
+    |
+    |
+    └── train.py                                     # <-- Main training script
+```
+
+
 ### Set up experiment
 
 You can easily set up different experiments just by changing the `common.yaml` config. Provide the environment and model you want to train or test here
@@ -61,7 +101,87 @@ mlflow:
 ```
 
 
-### Model config
+### Add your model
+
+To add a new model, you need to define **two classes**:
+
+---
+
+1. `Model Config` - inherits from [ModelConfig](src/rl_trainer/base/conf/model_conf.py#L14-L73)
+
+    - Implement the `create` function that uses the `_create` function from the parent class. This function is used for defining the model (propagates `input parameters` and `env` if applicable). For more information, please read the documentation (docstring) for the given [create method](src/rl_trainer/base/conf/model_conf.py#L61)
+
+---
+
+2. `Model` - inherits from [BaseModel](src/rl_trainer/base/model/base_model.py)
+
+    You need to implement the default API with the following methods:
+
+    - `learn`
+        - Main method for the learning process
+    - `save`
+        - Save the model
+    - `load`
+        - Load the model
+
+---
+
+3. Add `Training Model Config` to the `src/rl_trainer/configs/algorithms` folder
+
+---
+
+### Model Config
+
+Define a config class that will be used for creating the model instance. Each config should implement a `create` method.
+
+>  `NOTE`: Your config should contain a `name` attribute. The pipeline will match the provided class and config by this attribute. In general, we match config and model by the `key` name.
+
+>  `NOTE`: Remember to `register` your config using the `register_config` decorator. This will register the config and allow you to match the config with the model class.
+
+You can check the example class below or the full code [PPOBaseline](src/rl_trainer/algorithms/ppo/config.py)
+
+```python
+
+@register_config
+class PPOBaseline(StableBaselinesConfig):
+
+    name: str = Field("PPOBaseline", alias="$name")
+
+    def create(self, env: gym.Env) -> Model:
+
+        model = self._create(env)
+
+        if self.logger:
+            loggers = self._setup_logger()
+            logging.info("Setting up %d loggers for the model", len(loggers))
+            for logger in loggers:
+                model.set_logger(logger)
+
+        if self.callbacks:
+            callbacks = self._setup_callbacks()
+            logging.info(
+                "Setting up %d callbacks for the model", len(callbacks)
+            )
+            for callback in callbacks:
+                model.set_callbacks(callback)
+
+        return model
+
+```
+
+### Model
+
+
+```
+         Algorithm
+            ↓
+        Model Wrapper
+            ↓
+    StableBaselinesModels
+```
+
+
+### Training Model Config
 
 Each model config should contain two things:
 
@@ -73,9 +193,9 @@ If your model requires additional parameters, like in this case `inputs`, `logge
 Here is the example of config:
 
 ```yaml
-cls: rl_trainer.algorithms.ppo.model:PPOBipedal
+cls: rl_trainer.algorithms.ppo.model:PPOBaseline
 
-$name: PPOBipedalBaseline
+$name: PPOBaseline
 
 inputs:
     policy: MlpPolicy
@@ -102,6 +222,8 @@ callbacks:
     - rl_trainer.callbacks.mlflow:MLflowCallback:
         save_freq: 5000
 ```
+
+
 
 ### MLFlow
 

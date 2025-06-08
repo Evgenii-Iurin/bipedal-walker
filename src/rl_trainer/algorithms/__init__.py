@@ -1,7 +1,7 @@
-from .ppo.model import PPOBipedal
-from .ppo.config import PPOBipedalConfig
+from .ppo.model import PPOBaselineModel
+from .ppo.config import PPOBaselineConfig
 
 __all__ = [
-    "PPOBipedal",
-    "PPOBipedalConfig",
+    "PPOBaselineModel",
+    "PPOBaselineConfig",
 ]

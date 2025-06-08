@@ -1,6 +1,6 @@
-cls: rl_trainer.algorithms.ppo.model:PPOBipedal
+cls: rl_trainer.algorithms.ppo.model:PPOBaselineModel
 
-$name: PPOBipedalBaseline
+$name: PPOBaseline
 
 inputs:
   policy: MlpPolicy
