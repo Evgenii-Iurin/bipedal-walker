@@ -1,4 +1,4 @@
-from .model_conf import ModelConfig
+from .model_config import ModelConfig
 
 __all__ = [
     "ModelConfig",
