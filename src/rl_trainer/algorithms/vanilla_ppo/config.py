@@ -8,7 +8,7 @@ from rl_trainer.base.conf.model_config import ModelConfig
 
 @register_config(ConfigOptions.MODEL_CONFIG)
 class VanillaPPOConfig(ModelConfig):
-    """ """
+    """Configuration for Stable-Baselines3 PPO algorithm."""
 
     name: str = Field("VanillaPPO", alias="$name")
 
