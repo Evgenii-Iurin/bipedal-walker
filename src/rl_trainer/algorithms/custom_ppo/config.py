@@ -1,4 +1,3 @@
-# rl_trainer/configs/my_ppo_config.py
 from pydantic import Field
 from rl_trainer.base.registry import register_config
 from rl_trainer.base.types import ConfigOptions

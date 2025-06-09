@@ -41,46 +41,6 @@ Contains an end-to-end pipeline for training a RL algorithm in a bipedal environ
     python src/rl_trainer/train.py
     ```
 
-
-### Project structure
-
-```yaml
-./src
-└── rl_trainer
-    ├── algorithms                                  # <-- Add your models here
-    │   └── ppo
-    │       ├── config.py                           # <-- Model's config
-    │       └── model.py                            # <-- Model
-    |
-    ├── base                                        # <-- Folder contains all base scipts
-    │   ├── conf
-    │   │   ├── model_stable_baselines_config.py    # <-- Base config for Stable Baselines models
-    │   │   └── model_config.py                     # <-- Base config
-    │   ├── model
-    │   │   ├── base_stable_baselines_model.py      # <-- Base model for Stable Baselines models
-    │   │   └── base_model.py                       # <-- Base Model
-    │   ├── loader.py
-    │   ├── mflow_setup.py
-    │   └── registry.py
-    |
-    ├── callbacks                                   # <-- Keep all your callbacks here
-    │   └── mlflow.py
-    |
-    ├── reporters                                   # <-- Keep all your reporters here
-    │   └── mlflow_reporters.py
-    |
-    ├── configs                                     # <-- Define configs for you models here
-    │   ├── algorithms
-    │   │   └── ppo.yaml
-    │   ├── environments
-    │   |   └── bipedal.yaml
-    │   └── common.yaml
-    |
-    |
-    └── train.py                                     # <-- Main training script
-```
-
-
 ### Set up experiment
 
 You can easily set up different experiments just by changing the `common.yaml` config. Provide the environment and model you want to train or test here
@@ -93,6 +53,9 @@ setup:
   algo:
     name: ppo_baseline  # <-- name is used for mlflow tags
     config: src/rl_trainer/configs/algorithms/ppo.yaml  # <-- path to the model config
+  adapter:
+    name: stable_baseline_adapter
+    config: src/rl_trainer/configs/adapters/sb3_adapter_config.yaml
   seed: 42
 
 mlflow:
@@ -100,20 +63,79 @@ mlflow:
   ...
 ```
 
+# Overview
+
+### Adapter strategy
+
+- We provide an adapter layer to implement models from different libraries or custom models and integrate them into a common pipeline without needing to change everything.
+- We have separated the **model logic** from the **pipeline logic**. This means the model is unaware of **callbacks**, **reporters**, and other pipeline-related components.
+- A single adapter can be defined for different models.
+
+
+```yaml
+┌─────────┐ ┌─────────┐      ┌─────────┐     ┌─────────┐
+│ Model A0│ │ Model A1│      │ Model B │     │ Model C │      …as many models as you want
+│ (SB3)   │ │ (SB3)   │      │ (RLlib) │     │ (custom)│
+└────┬────┘ └────┬────┘      └────┬────┘     └────┬────┘
+    │           │                │               │
+    ▼           ▼                ▼               ▼
+┌──────────────────────┐ ┌──────────────┐ ┌──────────────┐
+│ Adapter A            │ │ Adapter B    │ │ Adapter C    │  …one per model's group
+│ (SB3Adapter)         │ │ (RLlibAdptr) │ │ (MyLibAdptr) │
+└────┬─────────────────┘ └────┬─────────┘ └────┬─────────┘
+     │ implements BaseAdapter API      │
+     └───────────┬─────────────────────┘
+                 ▼
+          ┌──────────────┐
+          │ trainer.load │   <- unchanged pipeline
+          │ trainer.learn│
+          └──────────────┘
+
+```
+
+
+### Pipeline overview
+
+![Register the Model](assets/pipeline_overview.png)
+
 
 ### Add your model
 
-To add a new model, you need to define **two classes**:
+To add a new model, you need to define **two classes** and **one .yaml**:
 
 ---
 
-1. `Model Config` - inherits from [ModelConfig](src/rl_trainer/base/conf/model_conf.py#L14-L73)
+1. `Model Config` - inherits from [ModelConfig](src/rl_trainer/base/conf/model_config.py#L11)
 
-    - Implement the `create` function that uses the `_create` function from the parent class. This function is used for defining the model (propagates `input parameters` and `env` if applicable). For more information, please read the documentation (docstring) for the given [create method](src/rl_trainer/base/conf/model_conf.py#L61)
+    - You can provide a `name` field with a **unique** value. This value will be used to match this config with the `.yaml` file that provides parameters for the model.
+    - The parent class uses the `create` function to automatically create the model with the given parameters.
+
+
+```yaml
+┌────────────────────┐       ┌────────────────────┐
+│  model_config.yaml │       │     config.py      │
+│  name: key_1       │       │  name: key_1       │
+└────────┬───────────┘       └────────┬───────────┘
+         │                             │
+         └────────────┬────────────────┘
+                      ▼
+                 match by name
+                      ▼
+               ┌────────────┐
+               │  .create() │   <- factory method that builds model
+               └─────┬──────┘
+                     │
+                     ▼
+               ┌────────────┐
+               │  model()   │   <- the final model object ready to be used
+               └────────────┘
+
+```
+
 
 ---
 
-2. `Model` - inherits from [BaseModel](src/rl_trainer/base/model/base_model.py)
+2. `Algorithm Model` - inherits from [Model](src/rl_trainer/base/model/base_model.py) or from `stable_baselines3/common/base_class/BaseAlgorithm`
 
     You need to implement the default API with the following methods:
 
@@ -130,99 +152,141 @@ To add a new model, you need to define **two classes**:
 
 ---
 
-### Model Config
+### Project structure
 
-Define a config class that will be used for creating the model instance. Each config should implement a `create` method.
+```yaml
+./src
+└── rl_trainer
+    ├── adapters                                    # <-- Keep all your adapters here
+    │   ├── configs
+    │   │   └── sb3_adapter_config.py
+    │   └── sb3_adapter.py
+    │
+    ├── algorithms                                  # <-- Add your models here
+    │   ├── custom_ppo
+    │   │   ├── config.py                           # <-- Model's config
+    │   │   └── model.py                            # <-- Model
+    │   └── vanilla_ppo
+    │       └── config.py
+    │
+    ├── base                                        # <-- Folder contains all base scipts
+    │   ├── conf
+    │   │   └── model_config.py                     # <-- Base config
+    │   ├── model
+    │   │   ├── base_adapter.py                     # <-- Base model for adapter
+    │   │   └── base_model.py                       # <-- Base model for algorithms
+    │   ├── loader.py
+    │   ├── mflow_setup.py
+    │   ├── registry.py
+    │   └── types.py
+    │
+    ├── callbacks                                   # <-- Keep all your callbacks here
+    │   └── mlflow.py
+    │
+    ├── reporters                                   # <-- Keep all your reporters here
+    │   └── mlflow_reporters.py
+    │
+    ├── configs                                     # <-- Define configs for you models here
+    │   ├── adapters
+    │   │   └── sb3_adapter_config.yaml
+    │   ├── algorithms
+    │   │   ├── ppo.yaml
+    │   │   ├── custom_ppo.yaml
+    │   │   └── vanilla_ppo.yaml
+    │   ├── environments
+    │   │   └── bipedal.yaml
+    │   └── common.yaml
+    │
+    └── train.py                                    # <-- Main training script
+
+```
+
+
+# How to...
+
+### Model Config (.py)
+
+Define a config class that will be used for creating the model instance
 
 >  `NOTE`: Your config should contain a `name` attribute. The pipeline will match the provided class and config by this attribute. In general, we match config and model by the `key` name.
 
 >  `NOTE`: Remember to `register` your config using the `register_config` decorator. This will register the config and allow you to match the config with the model class.
 
-You can check the example class below or the full code [PPOBaseline](src/rl_trainer/algorithms/ppo/config.py)
+You can check the example class below or the full code [VanillaPPOConfig](src/rl_trainer/algorithms/vanilla_ppo/config.py)
 
 ```python
 
-@register_config
-class PPOBaseline(StableBaselinesAdapterConfig):
+@register_config(ConfigOptions.MODEL_CONFIG)
+class VanillaPPOConfig(ModelConfig):
+    """ """
 
-    name: str = Field("PPOBaseline", alias="$name")
+    name: str = Field("VanillaPPO", alias="$name")
 
-    def create(self, env: gym.Env) -> Model:
-
-        model = self._create(env)
-
-        if self.logger:
-            loggers = self._setup_logger()
-            logging.info("Setting up %d loggers for the model", len(loggers))
-            for logger in loggers:
-                model.set_logger(logger)
-
-        if self.callbacks:
-            callbacks = self._setup_callbacks()
-            logging.info(
-                "Setting up %d callbacks for the model", len(callbacks)
-            )
-            for callback in callbacks:
-                model.set_callbacks(callback)
-
-        return model
-
-```
-
-### Model
-
-
-```
-         Algorithm
-            ↓
-        Model Wrapper
-            ↓
-    StableBaselinesModels
+    cls: str = "stable_baselines3:PPO"
 ```
 
 
-### Training Model Config
+### Model Config (.yaml)
 
 Each model config should contain two things:
 
 * `cls` – path to the module in the format `path:class`
 * `$name` – **unique name** for the given model. This name is used to automatically match the config with the provided model.
 
-If your model requires additional parameters, like in this case `inputs`, `logger`, or `callbacks`, you can define them here as well. Remember to add a method into the class to process the given parameters.
+> Note: `logger`, or `callbacks`are defined in the `adapter` config
 
 Here is the example of config:
 
 ```yaml
-cls: rl_trainer.algorithms.ppo.model:PPOBaseline
+cls: stable_baselines3:PPO
 
-$name: PPOBaseline
+$name: VanillaPPO
 
 inputs:
-    policy: MlpPolicy
-    seed: 0
-    learning_rate: 0.0003
-    gamma:         0.99
-    gae_lambda:    0.95
-    clip_range:    0.2
-    n_steps:       1024
-    batch_size:    32
-    n_epochs:      1
-    ent_coef:      0.0
-    vf_coef:       0.5
-    max_grad_norm: 0.5
-    progress_bar: True
+  policy: MlpPolicy
+  seed: 0
+  learning_rate: 0.0003
+  gamma:         0.99
+  gae_lambda:    0.95
+  clip_range:    0.2
+  n_steps:       1024
+  batch_size:    32
+  n_epochs:      1
+  ent_coef:      0.0
+  vf_coef:       0.5
+  max_grad_norm: 0.5
 
-logger:
-    - stable_baselines3.common.logger:Logger:
-        folder: null
-        output_formats:
-            - rl_trainer.reporters.mlflow_reporters:MLflowOutputFormat
-
-callbacks:
-    - rl_trainer.callbacks.mlflow:MLflowCallback:
-        save_freq: 5000
 ```
 
+
+
+### Adapter Layer: Decoupling Training Logic from Algorithms
+
+In `rl_trainer`, **adapters** act as the glue between raw RL algorithms (e.g., PPO, DQN) and the surrounding pipeline logic - such as logging, callbacks, checkpoints, and training policies.
+
+The main purpose of the **adapter layer** is to enable flexibility and composability:
+you can plug in **any compatible model** (from Stable-Baselines3, RLlib, or even a custom implementation), and the adapter will take care of configuring it with the training environment’s infrastructure—without requiring changes to the pipeline
+
+#### Why use an adapter?
+
+* **Separation of concerns**
+  The algorithm handles learning; the adapter manages logging, progress tracking, and external monitoring tools.
+
+* **Swappable model backends**
+  Want to try the same training setup with a different RL library? Just implement a new adapter—your pipeline stays unchanged.
+
+* **Unified interface**
+  All adapters implement the same base API (`load()`, `learn()`), so training code doesn’t need to know what’s under the hood.
+
+
+#### Example: [StableBaselinesAdapter](src/rl_trainer/adapters/sb3_adapter.py)
+
+The `StableBaselinesAdapter` is a ready-to-use adapter for models based on Stable-Baselines3. It wraps any SB3-compatible algorithm and enriches it with pipeline-level capabilities:
+
+* registers **callbacks** and **loggers**
+* tracks **training progress**
+* controls **timesteps and execution logic**
+* exposes a standard `learn()` method compatible with the training pipeline
 
 
 ### MLFlow
@@ -230,11 +294,6 @@ callbacks:
 To track all experiments, we are wrapping the training pipeline with MLflow. This allows us to track all metrics, model parameters, and artifacts
 
 ![MLFlow UI](assets/mlflow.png)
-
-
-### Model creation strategy
-
-![Register the Model](assets/pipeline_overview.png)
 
 
 ## Git Flow
