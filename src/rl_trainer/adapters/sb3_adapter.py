@@ -8,6 +8,49 @@ logging.basicConfig(level=logging.INFO)
 
 
 class StableBaselinesAdapter(BaseAdapter):
+    """
+    Adapter for Stable-Baselines3 RL algorithms.
+
+    This adapter implements the BaseAdapter interface to integrate Stable-Baselines3
+    models into the rl_trainer pipeline. It handles the configuration of callbacks,
+    loggers, and training execution while maintaining separation between the algorithm
+    logic and pipeline infrastructure.
+
+    The adapter follows the adapter pattern to decouple RL algorithms from pipeline
+    concerns such as logging, progress tracking, and callback management.
+
+    Attributes:
+        name (str): Identifier for the adapter type, defaults to "StableBaselineAdapter"
+        timesteps (int): Total number of training timesteps to execute
+        progress_bar (bool): Whether to display training progress bar
+        callbacks (list): List of callback functions to register with the model
+        loggers (list): List of logger instances to register with the model
+        model (BaseAlgorithm | None): The loaded Stable-Baselines3 model instance
+
+    Example:
+        >>> from stable_baselines3 import PPO
+        >>> import gymnasium as gym
+        >>>
+        >>> # Create environment and model
+        >>> env = gym.make("CartPole-v1")
+        >>> model = PPO("MlpPolicy", env)
+        >>>
+        >>> # Create adapter with configuration
+        >>> adapter = StableBaselinesAdapter(
+        ...     timesteps=10000,
+        ...     progress_bar=True,
+        ...     callbacks=[checkpoint_callback],
+        ...     loggers=[mlflow_logger]
+        ... )
+        >>>
+        >>> # Load model and train
+        >>> adapter.load(model).learn()
+
+    Note:
+        This adapter is specifically designed for Stable-Baselines3 models that
+        implement the BaseAlgorithm interface. For other RL libraries, separate
+        adapters should be implemented following the same BaseAdapter interface.
+    """
 
     name: str = Field("StableBaselineAdapter", alias="$name")
 

@@ -16,7 +16,7 @@ class StableBaselinesAdapterConfig(BaseModel):
     """
     Configuration class for Stable Baselines3 reinforcement learning models.
 
-    This class extends ModelConfig to provide specific configuration options for
+    This class provides specific configuration options for
     Stable Baselines3 algorithms, including logger and callback setup with dynamic
     class loading capabilities.
 
@@ -34,8 +34,8 @@ class StableBaselinesAdapterConfig(BaseModel):
             Example: [{'stable_baselines3.common.callbacks:CheckpointCallback': {'save_freq': 1000}}]
 
     Methods:
-        _setup_logger(): Sets up logger instances from configuration
-        _setup_callbacks(): Sets up callback instances from configuration
+        setup_logger(): Sets up logger instances from configuration
+        setup_callbacks(): Sets up callback instances from configuration
         load_class_from_path(class_path): Dynamically loads a class from module path
 
     Raises:
