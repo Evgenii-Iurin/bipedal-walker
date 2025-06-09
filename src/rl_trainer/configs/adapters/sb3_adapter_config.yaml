@@ -1,0 +1,17 @@
+cls: rl_trainer.adapters:StableBaselinesAdapter
+
+$name: StableBaselineAdapter
+
+loggers:
+  - stable_baselines3.common.logger:Logger:
+      folder: null
+      output_formats:
+        - rl_trainer.reporters.mlflow_reporters:MLflowOutputFormat
+
+callbacks:
+  - rl_trainer.callbacks.mlflow:MLflowCallback:
+      save_freq: 5000
+
+timesteps: 5000
+
+progress_bar: true

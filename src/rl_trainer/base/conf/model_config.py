@@ -3,13 +3,12 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
 from rl_trainer.base import Model
 import gymnasium as gym
-from abc import abstractmethod, ABC
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 
-class ModelConfig(ABC, BaseModel):
+class ModelConfig(BaseModel):
     """
     Configuration class for dynamically creating model instances.
 
@@ -56,30 +55,6 @@ class ModelConfig(ABC, BaseModel):
         default=None, description="Input parameters for the model as keyword arguments dictionary."
     )
 
-    @abstractmethod
-    def create(self, env: gym.Env | None = None) -> Model:
-        """
-        Create a model instance from the configuration.
-
-        This method must be implemented by subclasses and should call the internal
-        `_create()` method to instantiate the base model, then apply any additional
-        customizations (callbacks, wrappers, etc.).
-
-        Args:
-            env (gym.Env | None, optional): Gymnasium environment instance.
-
-        Returns:
-            Model: Configured model instance with any additional customizations.
-
-        Example:
-            >>> def create(self, env=None):
-            ...     model = self._create(env)  # Create base model
-            ...     # Add callbacks, wrappers, or other customizations
-            ...     model.add_callback(CustomCallback())
-            ...     return model
-        """
-        pass
-
     @field_validator("cls", mode="before")
     @classmethod
     def _check_formats(cls, v):
@@ -92,7 +67,7 @@ class ModelConfig(ABC, BaseModel):
             raise ValueError(f"Invalid class path format: '{v}'.\n" "Expected format 'module_path:ClassName'") from exc
         return v
 
-    def _create(self, env: gym.Env | None = None) -> Model:
+    def create(self, env: gym.Env | None = None) -> Model:
         """
         Create an instance of the model from the configuration.
 
@@ -130,9 +105,6 @@ class ModelConfig(ABC, BaseModel):
 
         if not isinstance(model_cls, type):
             raise TypeError(f"'{class_name}' in module '{module_path}' is not a class.")
-
-        if not issubclass(model_cls, Model):
-            raise TypeError(f"'{class_name}' in module '{module_path}' must be a subclass of Model.")
 
         if env is not None and self.inputs:
             self.inputs["env"] = env

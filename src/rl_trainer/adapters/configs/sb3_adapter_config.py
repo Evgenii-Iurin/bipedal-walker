@@ -1,6 +1,9 @@
 from typing import Any
 from pydantic import Field, field_validator
-from rl_trainer.base.conf import ModelConfig
+from pydantic import BaseModel
+from rl_trainer.base import BaseAdapter
+from rl_trainer.base.types import ConfigOptions
+from rl_trainer.base.registry import register_config
 import importlib
 
 import logging
@@ -8,7 +11,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-class StableBaselinesConfig(ModelConfig):
+@register_config(ConfigOptions.ADAPTER)
+class StableBaselinesAdapterConfig(BaseModel):
     """
     Configuration class for Stable Baselines3 reinforcement learning models.
 
@@ -42,7 +46,7 @@ class StableBaselinesConfig(ModelConfig):
 
     Example:
         ```python
-        config = StableBaselinesConfig(
+        config = StableBaselinesAdapterConfig(
             logger=[
                 {'stable_baselines3.common.logger:TensorBoardOutputFormat': {'log_dir': './logs'}}
             ],
@@ -53,11 +57,50 @@ class StableBaselinesConfig(ModelConfig):
         ```
     """
 
-    logger: list[dict[str, Any]] | None = Field(default=None, description="List of logger configurations for the model")
+    cls: str = "rl_trainer.adapters:StableBaselinesAdapter"
+
+    name: str = Field("StableBaselineAdapter", alias="$name")
+
+    loggers: list[dict[str, Any]] | None = Field(default=None, description="List of logger configurations for the model")
 
     callbacks: list[dict[str, Any]] = Field(default=None, description="List of callback configurations for the model")
 
-    @field_validator("logger", mode="before")
+    timesteps: int = Field(
+        default=10000,
+        description="Total number of timesteps for training the model. Default is 10000.",
+    )
+    progress_bar: bool = Field(
+        default=True,
+        description="Whether to display a progress bar during training. Default is True.",
+    )
+
+    def create(self):
+        """ """
+
+        module_path, class_name = self.cls.split(":")
+        module = importlib.import_module(module_path)
+
+        try:
+            cls = getattr(module, class_name)
+        except AttributeError as exc:
+            raise AttributeError(f"Class '{class_name}' not found in module '{module_path}'.") from exc
+
+        if not isinstance(cls, type):
+            raise TypeError(f"'{class_name}' in module '{module_path}' is not a class.")
+
+        if not issubclass(cls, BaseAdapter):
+            raise TypeError(f"'{class_name}' in module '{module_path}' is not a BaseAdapter.")
+
+        adapter = cls(
+            timesteps=self.timesteps,
+            progress_bar=self.progress_bar,
+            callbacks=self.setup_callback(),
+            loggers=self.setup_logger(),
+        )
+
+        return adapter
+
+    @field_validator("loggers", mode="before")
     @classmethod
     def _validate_logger(cls, v):
         """Validates the logger configuration format"""
@@ -85,19 +128,19 @@ class StableBaselinesConfig(ModelConfig):
 
         return v
 
-    def _setup_logger(self):
+    def setup_logger(self):
         """
         Setup loggers based on the logger configuration.
 
         Returns:
             List of logger instances or empty list if no logger config provided
         """
-        if not self.logger:
+        if not self.loggers:
             return []
 
         logger_instances = []
 
-        for logger_config in self.logger:
+        for logger_config in self.loggers:
             logger_cls_path, params = next(iter(logger_config.items()))
 
             try:
@@ -167,7 +210,7 @@ class StableBaselinesConfig(ModelConfig):
 
         return v
 
-    def _setup_callbacks(self):
+    def setup_callback(self):
         """
         Setup callbacks based on the callbacks configuration.
 
