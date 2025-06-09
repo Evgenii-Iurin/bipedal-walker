@@ -4,12 +4,15 @@ setup:
     config: src/rl_trainer/configs/environments/bipedal_walker.yaml
   algo:
     name: ppo_baseline
-    config: src/rl_trainer/configs/algorithms/ppo.yaml
+    config: src/rl_trainer/configs/algorithms/vanilla_ppo.yaml
+  adapter:
+    name: stable_baseline_adapter
+    config: src/rl_trainer/configs/adapters/sb3_adapter_config.yaml
   seed: 42
 
 mlflow:
   tracking_uri:  http://127.0.0.1:8080
-  experiment:  ${setup.env.name}-${setup.algo.name}-exp${now:%Y%m%d%H%M}
+  experiment:  ${setup.env.name}-${setup.algo.name}-${setup.adapter.name}-exp${now:%Y%m%d%H%M}
   run_name:    ${now:%Y%m%d%H%M%S}
   tags:
     env_name: ${setup.env.name}

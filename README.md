@@ -143,7 +143,7 @@ You can check the example class below or the full code [PPOBaseline](src/rl_trai
 ```python
 
 @register_config
-class PPOBaseline(StableBaselinesConfig):
+class PPOBaseline(StableBaselinesAdapterConfig):
 
     name: str = Field("PPOBaseline", alias="$name")
 

@@ -1,0 +1,17 @@
+cls: stable_baselines3:PPO
+
+$name: VanillaPPO
+
+inputs:
+  policy: MlpPolicy
+  seed: 0
+  learning_rate: 0.0003
+  gamma:         0.99
+  gae_lambda:    0.95
+  clip_range:    0.2
+  n_steps:       1024
+  batch_size:    32
+  n_epochs:      1
+  ent_coef:      0.0
+  vf_coef:       0.5
+  max_grad_norm: 0.5

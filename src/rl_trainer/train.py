@@ -1,7 +1,8 @@
 import gymnasium as gym
 import hydra
 from omegaconf import DictConfig
-from rl_trainer.base.loader import get_model_config
+from rl_trainer.base.types import ConfigOptions
+from rl_trainer.base.loader import get_config
 from rl_trainer.base.mflow_setup import mlflow_run
 
 import logging
@@ -22,10 +23,16 @@ def run_training_pipeline(cfg: DictConfig) -> None:
     Main function to run the training pipeline.
     """
     env = build_env(cfg.setup.env)
-    model_config = get_model_config(cfg.setup.algo.config)
+    model_config = get_config(cfg.setup.algo.config, ConfigOptions.MODEL_CONFIG)
+    adapter_config = get_config(cfg.setup.adapter.config, ConfigOptions.ADAPTER)
+
     model = model_config.create(env)
+    adapter = adapter_config.create()
+
+    trainer = adapter.load(model)
+
     with mlflow_run(cfg.mlflow):
-        model.learn()
+        trainer.learn()
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="common")
