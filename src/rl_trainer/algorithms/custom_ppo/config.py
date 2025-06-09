@@ -12,7 +12,7 @@ class CustomPPOConfig(ModelConfig):
 
     name: str = Field("CustomPPO", alias="$name")
 
-    cls: str = "rl_trainer.algorithms.custom_ppo.model:CustomPPO"
+    cls: str = "rl_trainer.algorithms:CustomPPO"
 
     inputs: dict = Field(
         default_factory=lambda: {
